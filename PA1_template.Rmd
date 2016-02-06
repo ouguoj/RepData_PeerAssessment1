@@ -8,18 +8,50 @@ output:
 
 ## Loading and preprocessing the data
 
-
+activitydata<-read.csv("activity.csv")
+activitydata$date<-as.Date(activitydata$date, "%Y-%m-%d")
 
 ## What is mean total number of steps taken per day?
+total_steps<-aggregate(steps~date, activitydata, sum,na.rm=T)
+hist(total_steps$steps, xlab="Steps per day", ylab="Number of days", main="Total number of steps taken per day")
 
+##Calculate and report mean and median of total steps taken per day
+mean_steps<-mean(total_steps$steps, na.rm=T)
+median_steps<-median(total_steps$steps, na.rm=T)
+print(paste("The mean total number of steps taken per day is", as.integer(mean_steps)))
+print(paste("The median total number of steps taken per day is", as.integer(median_steps)))
 
 
 ## What is the average daily activity pattern?
-
+average_activity<-aggregate(steps~interval, activitydata, mean, na.rm=T)
+plot(average_activity$interval, average_activity$steps, type="l", xlab="Time", ylab="Number of steps", main="Average number of steps per 5 minute interval in a day")
+print(paste("The 5-minute interval, on average across all the days in the dataset, that contains the most number of steps is",average_activity[which.max(average_activity$steps),1]))
 
 
 ## Imputing missing values
+missingdata<-sum(is.na(activitydata$steps))
+print(paste("The total number of rows with NAs is",missingdata))
+activitydata_v2<-activitydata
 
+for(i in 1:nrow(activitydata_v2)) {
+  if(is.na(activitydata_v2[i,1])) {
+    activitydata_v2[i,1]<-average_activity[match(activitydata_v2[i,3], average_activity$interval),2]
+  }
+}
+
+total_steps_v2<-aggregate(steps~date, activitydata_v2, sum,na.rm=T)
+hist(total_steps_v2$steps, xlab="Steps per day", ylab="Number of days", main="Total number of steps taken per day")
+mean_steps_v2<-mean(total_steps_v2$steps, na.rm=T)
+median_steps_v2<-median(total_steps_v2$steps, na.rm=T)
+print(paste("The mean total number of steps taken per day is", as.integer(mean_steps_v2), "compared to the previous mean of", as.integer(mean_steps)))
+print(paste("The median total number of steps taken per day is", as.integer(median_steps_v2), "compared to the previous median of", as.integer(median_steps)))
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+activitydata_v2$day<-weekdays(activitydata_v2$date)
+activitydata_v2$day<-as.factor(ifelse(activitydata_v2$day=="Saturday"|activitydata_v2$day=="Sunday","Weekend","Weekday"))
+average_activity_v2<-aggregate(activitydata_v2$steps, by=list(activitydata_v2$interval,activitydata_v2$day), mean)
+colnames(average_activity_v2)<-c("interval","day","steps")
+
+library(lattice)
+xyplot(steps~interval | factor(day),data=average_activity_v2, type="l", layout=c(1,2), xlab="Time", ylab="Average No of steps", main="Average number of steps on weekday/weekend")
